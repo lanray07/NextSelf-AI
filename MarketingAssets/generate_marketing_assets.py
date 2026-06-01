@@ -10,6 +10,8 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "output"
 OUT.mkdir(parents=True, exist_ok=True)
+ASC_PREMIUM = ROOT / "app-store-connect-premium"
+ASC_PREMIUM.mkdir(parents=True, exist_ok=True)
 
 
 def font(size: int, weight: str = "regular") -> ImageFont.FreeTypeFont:
@@ -255,6 +257,43 @@ def compose_promo(filename: str, size: tuple[int, int]) -> None:
     canvas.convert("RGB").save(OUT / filename, quality=95)
 
 
+def export_resized(source_name: str, destination_name: str, size: tuple[int, int]) -> None:
+    source = OUT / source_name
+    image = Image.open(source).convert("RGB")
+    image = image.resize(size, Image.Resampling.LANCZOS)
+    image.save(ASC_PREMIUM / destination_name, quality=95)
+
+
+def compose_premium_app_store_pack() -> None:
+    iphone_specs = [
+        ("premium-iphone-01-dashboard.png", "Meet your future self.", "Your daily command center for identity-based growth.", "Today", "Complete today's transformation plan", 86),
+        ("premium-iphone-02-future-chat.png", "Talk to the person you're becoming.", "Future-self conversations for motivation, clarity, and action.", "Future Self", "Ask future-you for the next move", 88),
+        ("premium-iphone-03-voice-journal.png", "Voice journal your growth.", "Capture wins, setbacks, goals, and reflections with AI summaries.", "Voice Journal", "Record a two-minute reflection", 82),
+        ("premium-iphone-04-daily-missions.png", "Build discipline one mission at a time.", "Personalized daily missions turn intention into identity evidence.", "Daily Missions", "One focused mission before noon", 79),
+        ("premium-iphone-05-check-in.png", "Check in with your whole self.", "Track mood, energy, focus, confidence, stress, and sleep quality.", "Daily Check-In", "Name your energy and choose one action", 76),
+        ("premium-iphone-06-timeline.png", "Watch your story change.", "Milestones, streaks, journal highlights, and growth moments in one timeline.", "Timeline", "Review your latest growth milestone", 84),
+        ("premium-iphone-07-analytics.png", "See your transformation trend.", "Premium analytics for consistency, habit strength, and growth velocity.", "Analytics", "Protect tomorrow's strongest habit", 91),
+        ("premium-iphone-08-comeback.png", "Reset without shame.", "The Comeback Engine helps you restart when consistency breaks.", "Comeback", "Choose the next easy win", 74),
+        ("premium-iphone-09-identity-levels.png", "Level up your identity.", "Unlock themes, avatar upgrades, achievements, and elite progression.", "Identity Levels", "Advance from Builder to Disciplined", 89),
+        ("premium-iphone-10-premium.png", "Unlock deeper transformation.", "Unlimited AI coaching, voice journaling, reports, avatars, and themes.", "Premium", "Upgrade your future-self system", 93),
+    ]
+    for name, headline, subhead, title, mission, score in iphone_specs:
+        compose_store_screenshot(name, (1290, 2796), headline, subhead, "iphone", title, mission, score)
+        export_resized(name, name, (1242, 2688))
+
+    ipad_specs = [
+        ("premium-ipad-01-dashboard.png", "A cinematic growth command center.", "Daily missions, Future Self, score trends, and coaching insight across a larger canvas.", "Dashboard", "Review today's transformation plan", 86),
+        ("premium-ipad-02-analytics.png", "See the story behind your progress.", "Track consistency, streaks, strongest habits, weakest habits, and growth velocity.", "Growth", "Find your strongest pattern", 91),
+        ("premium-ipad-03-journal.png", "Reflect with more room to think.", "Voice journaling, transcripts, summaries, and recurring themes designed for focus.", "Voice Journal", "Turn reflection into momentum", 84),
+        ("premium-ipad-04-timeline.png", "Your transformation timeline.", "Milestones, journal highlights, completed missions, and growth moments beautifully organized.", "Timeline", "Capture a defining moment", 88),
+        ("premium-ipad-05-future-self.png", "Future-self coaching, expanded.", "Conversation, identity cards, reflections, and progress reviews in one premium space.", "Future Self", "Ask future-you for advice", 90),
+        ("premium-ipad-06-premium.png", "Premium coaching built for identity change.", "Unlimited AI coaching, advanced insights, reports, avatars, and exclusive themes.", "Elite", "Unlock advanced coaching", 94),
+    ]
+    for name, headline, subhead, title, mission, score in ipad_specs:
+        compose_store_screenshot(name, (2048, 2732), headline, subhead, "ipad", title, mission, score)
+        export_resized(name, name, (2048, 2732))
+
+
 def main() -> None:
     compose_store_screenshot(
         "iphone-01-dashboard.png",
@@ -309,6 +348,7 @@ def main() -> None:
     compose_subscription_review()
     compose_promo("promo-landscape-16x9.png", (1920, 1080))
     compose_promo("promo-square-1x1.png", (1600, 1600))
+    compose_premium_app_store_pack()
 
 
 if __name__ == "__main__":
