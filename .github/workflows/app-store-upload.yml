@@ -145,13 +145,26 @@ jobs:
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-          APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
         run: |
           IPA_PATH="$(find "$PWD/build/export" -name '*.ipa' -print -quit)"
           test -n "$IPA_PATH"
+          set +e
           xcrun altool \
             --upload-app \
             --type ios \
             --file "$IPA_PATH" \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
-            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" 2>&1 | tee upload.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "::group::Upload error summary"
+            grep -E "Error|error|ERROR|Failed|failed|invalid|Invalid|issuer|API|asset|bundle|version|build|privacy|agreement|contract|provider|authentication|authorized|authorization|not found|No such" upload.log | tail -n 120 || true
+            echo "::endgroup::"
+            first_error="$(grep -E "Error|error|ERROR|Failed|failed|invalid|Invalid|issuer|API|asset|bundle|version|build|privacy|agreement|contract|provider|authentication|authorized|authorization|not found|No such" upload.log | head -n 1 || true)"
+            if [ -n "$first_error" ]; then
+              echo "::error title=App Store Connect upload failed::$first_error"
+            else
+              echo "::error title=App Store Connect upload failed::altool exited with status $status"
+            fi
+            exit "$status"
+          fi
