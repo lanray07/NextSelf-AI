@@ -26,9 +26,6 @@ jobs:
       - name: Validate required secrets
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
-          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
           APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
@@ -36,9 +33,6 @@ jobs:
           missing=0
           for name in \
             APPLE_TEAM_ID \
-            IOS_PROVISIONING_PROFILE_NAME \
-            IOS_PROVISIONING_PROFILE_BASE64 \
-            IOS_DISTRIBUTION_CERTIFICATE_BASE64 \
             APP_STORE_CONNECT_API_KEY_ID \
             APP_STORE_CONNECT_API_ISSUER_ID \
             APP_STORE_CONNECT_API_PRIVATE_KEY
@@ -50,51 +44,49 @@ jobs:
           done
           exit "$missing"
 
-      - name: Import signing certificate
+      - name: Write App Store Connect API key
         env:
-          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
-          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
         run: |
-          if [ -z "$KEYCHAIN_PASSWORD" ]; then
-            KEYCHAIN_PASSWORD="$(uuidgen)"
-          fi
-          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security set-keychain-settings -lut 21600 build.keychain
-          echo "$IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 --decode > distribution.p12
-          security import distribution.p12 -k build.keychain -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
-          security find-identity -v -p codesigning build.keychain
-
-      - name: Install provisioning profile
-        env:
-          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-        run: |
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/NextSelfAI.mobileprovision"
-          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
-          security cms -D -i "$PROFILE_PATH" > profile.plist
-          /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" profile.plist
-          /usr/libexec/PlistBuddy -c "Print :Name" profile.plist
-          if ! /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" profile.plist | grep -q 'com.nextself.ai$'; then
-            echo "::error title=Wrong provisioning profile::Profile must target bundle id com.nextself.ai"
-            exit 1
-          fi
+          mkdir -p "$HOME/private_keys"
+          KEY_PATH="$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          printf "%s" "$APP_STORE_CONNECT_API_PRIVATE_KEY" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "APP_STORE_CONNECT_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
 
       - name: Prepare export options
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
         run: |
-          sed -i '' "s/__APPLE_TEAM_ID__/$APPLE_TEAM_ID/g" ExportOptions.plist
-          sed -i '' "s/__IOS_PROVISIONING_PROFILE_NAME__/$IOS_PROVISIONING_PROFILE_NAME/g" ExportOptions.plist
+          cat > ExportOptions.generated.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>destination</key>
+            <string>export</string>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>teamID</key>
+            <string>$APPLE_TEAM_ID</string>
+            <key>thinning</key>
+            <string>&lt;none&gt;</string>
+            <key>uploadSymbols</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
 
       - name: Archive
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
         run: |
           xcodebuild \
             -project "NextSelfAI.xcodeproj" \
@@ -102,9 +94,12 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$PWD/build/NextSelfAI.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$APP_STORE_CONNECT_API_KEY_PATH" \
+            -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_API_ISSUER_ID" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME" \
+            CODE_SIGN_STYLE=Automatic \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             MARKETING_VERSION=1.0 \
             clean archive
@@ -114,7 +109,11 @@ jobs:
           xcodebuild \
             -exportArchive \
             -archivePath "$PWD/build/NextSelfAI.xcarchive" \
-            -exportOptionsPlist ExportOptions.plist \
+            -exportOptionsPlist ExportOptions.generated.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$APP_STORE_CONNECT_API_KEY_PATH" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}" \
             -exportPath "$PWD/build/export"
 
       - name: Upload IPA to App Store Connect
@@ -123,8 +122,6 @@ jobs:
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
           APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
         run: |
-          mkdir -p "$HOME/private_keys"
-          printf "%s" "$APP_STORE_CONNECT_API_PRIVATE_KEY" > "$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
           IPA_PATH="$(find "$PWD/build/export" -name '*.ipa' -print -quit)"
           test -n "$IPA_PATH"
           xcrun altool \
