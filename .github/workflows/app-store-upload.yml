@@ -88,6 +88,7 @@ jobs:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
         run: |
+          set +e
           xcodebuild \
             -project "NextSelfAI.xcodeproj" \
             -scheme "NextSelf AI" \
@@ -102,10 +103,22 @@ jobs:
             CODE_SIGN_STYLE=Automatic \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             MARKETING_VERSION=1.0 \
-            clean archive
+            clean archive 2>&1 | tee archive.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "::group::Archive error summary"
+            grep -E "error:|warning:|ARCHIVE FAILED|BUILD FAILED|No Accounts|provision|Provisioning|Signing|CodeSign|requires a provisioning profile|No signing certificate|The operation couldn" archive.log | tail -n 80 || true
+            echo "::endgroup::"
+            first_error="$(grep -E "error:|ARCHIVE FAILED|BUILD FAILED|No Accounts|requires a provisioning profile|No signing certificate|The operation couldn" archive.log | head -n 1 || true)"
+            if [ -n "$first_error" ]; then
+              echo "::error title=Xcode archive failed::$first_error"
+            fi
+            exit "$status"
+          fi
 
       - name: Export IPA
         run: |
+          set +e
           xcodebuild \
             -exportArchive \
             -archivePath "$PWD/build/NextSelfAI.xcarchive" \
@@ -114,7 +127,18 @@ jobs:
             -authenticationKeyPath "$APP_STORE_CONNECT_API_KEY_PATH" \
             -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}" \
-            -exportPath "$PWD/build/export"
+            -exportPath "$PWD/build/export" 2>&1 | tee export.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "::group::Export error summary"
+            grep -E "error:|warning:|EXPORT FAILED|No Accounts|provision|Provisioning|Signing|CodeSign|requires a provisioning profile|No signing certificate|The operation couldn" export.log | tail -n 80 || true
+            echo "::endgroup::"
+            first_error="$(grep -E "error:|EXPORT FAILED|No Accounts|requires a provisioning profile|No signing certificate|The operation couldn" export.log | head -n 1 || true)"
+            if [ -n "$first_error" ]; then
+              echo "::error title=Xcode export failed::$first_error"
+            fi
+            exit "$status"
+          fi
 
       - name: Upload IPA to App Store Connect
         env:
