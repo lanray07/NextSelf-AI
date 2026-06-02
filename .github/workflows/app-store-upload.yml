@@ -150,21 +150,35 @@ jobs:
           test -n "$IPA_PATH"
           set +e
           xcrun altool \
+            --validate-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
+            --output-format xml 2>&1 | tee validate.log
+          validate_status=${PIPESTATUS[0]}
+          if [ "$validate_status" -ne 0 ]; then
+            diagnostic="$(tail -n 80 validate.log || true)"
+            diagnostic="${diagnostic//'%'/'%25'}"
+            diagnostic="${diagnostic//$'\n'/'%0A'}"
+            diagnostic="${diagnostic//$'\r'/'%0D'}"
+            echo "::error title=App Store Connect validation failed::$diagnostic"
+            exit "$validate_status"
+          fi
+
+          xcrun altool \
             --upload-app \
             --type ios \
             --file "$IPA_PATH" \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
             --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
-            --verbose 2>&1 | tee upload.log
+            --output-format xml 2>&1 | tee upload.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             echo "::group::Upload error summary"
             grep -E "Error|error|ERROR|Failed|failed|invalid|Invalid|issuer|API|asset|bundle|version|build|privacy|agreement|contract|provider|authentication|authorized|authorization|not found|No such" upload.log | tail -n 120 || true
             echo "::endgroup::"
-            diagnostic="$(grep -E "Error|error|ERROR|Failed|failed|invalid|Invalid|issuer|API|asset|bundle|version|build|privacy|agreement|contract|provider|authentication|authorized|authorization|not found|No such" upload.log | grep -v "Error uploading" | tail -n 80 || true)"
-            if [ -z "$diagnostic" ]; then
-              diagnostic="$(tail -n 80 upload.log || true)"
-            fi
+            diagnostic="$(tail -n 80 upload.log || true)"
             diagnostic="${diagnostic//'%'/'%25'}"
             diagnostic="${diagnostic//$'\n'/'%0A'}"
             diagnostic="${diagnostic//$'\r'/'%0D'}"
