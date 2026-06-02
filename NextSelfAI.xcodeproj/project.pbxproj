@@ -321,6 +321,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "NextSelf AI";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "NextSelf AI uses the microphone for voice journaling.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "NextSelf AI uses speech recognition to transcribe voice journals.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -356,6 +357,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "NextSelf AI";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "NextSelf AI uses the microphone for voice journaling.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "NextSelf AI uses speech recognition to transcribe voice journals.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
