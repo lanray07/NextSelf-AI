@@ -21,7 +21,7 @@ Add these in GitHub under `Settings > Secrets and variables > Actions`:
 - `APP_STORE_CONNECT_API_ISSUER_ID`
 - `APP_STORE_CONNECT_API_PRIVATE_KEY`
 
-The provisioning profile must match bundle ID `com.nextself.ai`.
+The provisioning profile must match bundle ID `com.nextSelfai.app`.
 
 ## Upload
 

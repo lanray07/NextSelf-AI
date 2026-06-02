@@ -18,7 +18,7 @@
 	<true/>
 	<key>provisioningProfiles</key>
 	<dict>
-		<key>com.nextself.ai</key>
+		<key>com.nextSelfai.app</key>
 		<string>__IOS_PROVISIONING_PROFILE_NAME__</string>
 	</dict>
 </dict>
