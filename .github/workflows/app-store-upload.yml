@@ -1,6 +1,9 @@
 name: Archive and Upload to App Store Connect
 
 on:
+  push:
+    tags:
+      - "app-store-upload-*"
   workflow_dispatch:
     inputs:
       build_number:
@@ -11,6 +14,8 @@ on:
 jobs:
   archive-upload:
     runs-on: macos-15
+    env:
+      BUILD_NUMBER: ${{ github.event.inputs.build_number || github.run_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,7 +106,7 @@ jobs:
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME" \
-            CURRENT_PROJECT_VERSION="${{ inputs.build_number }}" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             MARKETING_VERSION=1.0 \
             clean archive
 
