@@ -265,6 +265,7 @@ struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) { }
 }
 
+@MainActor
 enum ProgressReportExporter {
     static func pdfReport(appModel: AppModel) -> URL {
         let url = FileManager.default.temporaryDirectory.appending(path: "NextSelf-Progress-Report.pdf")
