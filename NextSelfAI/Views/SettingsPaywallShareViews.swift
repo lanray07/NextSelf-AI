@@ -35,8 +35,8 @@ struct SettingsView: View {
             }
 
             Section("Legal") {
-                NavigationLink("Privacy Policy") { LegalTextView(title: "Privacy Policy", bodyText: "Privacy policy placeholder for local-first personal growth data, AI requests, subscriptions, and export controls.") }
-                NavigationLink("Terms of Use") { LegalTextView(title: "Terms of Use", bodyText: "Terms placeholder for subscriptions, acceptable use, and wellness-only scope.") }
+                NavigationLink("Privacy Policy") { LegalTextView(title: "Privacy Policy", bodyText: LegalCopy.privacy) }
+                NavigationLink("Terms of Use") { LegalTextView(title: "Terms of Use", bodyText: LegalCopy.terms) }
                 NavigationLink("Wellness Disclaimer") { LegalTextView(title: "Wellness Disclaimer", bodyText: "NextSelf AI is a wellness and personal growth tool only. It is not therapy, medical advice, diagnosis, addiction treatment, crisis intervention, or a replacement for professional healthcare.") }
             }
 
@@ -72,6 +72,18 @@ struct PaywallView: View {
                         PlanCard(plan: .premiumMonthly, features: ["Unlimited AI coaching", "Voice journaling", "Future-self conversations", "Transformation analytics"])
                         PlanCard(plan: .premiumYearly, features: ["Best value Premium", "Progress reports", "Premium themes", "All Premium features"])
                         PlanCard(plan: .eliteMonthly, features: ["Advanced coaching personalities", "Deep transformation reports", "Premium avatars", "Exclusive themes"])
+
+                        VStack(spacing: 8) {
+                            Text("Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID subscriptions settings.")
+                                .font(.footnote)
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.white.opacity(0.68))
+                            Link("Privacy Policy", destination: URL(string: "https://github.com/lanray07/NextSelf-AI/blob/main/PRIVACY.md")!)
+                            Link("Terms of Use (EULA)", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
+                        }
+                        .font(.footnote.weight(.semibold))
+                        .tint(.yellow)
+                        .padding(.top, 4)
                     }
                     .padding(18)
                 }
@@ -80,6 +92,28 @@ struct PaywallView: View {
             .toolbar { Button("Done") { dismiss() } }
         }
     }
+}
+
+enum LegalCopy {
+    static let privacy = """
+    NextSelf AI stores the reflections, goals, check-ins, missions, progress scores, and preferences you enter so the app can provide journaling, coaching, analytics, and personalization.
+
+    Voice journaling may request microphone and speech recognition access so you can record and transcribe reflections. You can manage these permissions in iOS Settings.
+
+    We do not sell your personal information or share it with advertisers. The app is designed as a local-first wellness and personal growth tool.
+
+    Full privacy policy:
+    https://github.com/lanray07/NextSelf-AI/blob/main/PRIVACY.md
+    """
+
+    static let terms = """
+    NextSelf AI uses Apple's standard Terms of Use (EULA):
+    https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+    Auto-renewable subscriptions unlock premium coaching, analytics, journaling, reports, avatars, and themes. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. You can manage or cancel subscriptions in your Apple ID account settings.
+
+    NextSelf AI is a wellness and personal growth tool only. It does not provide therapy, diagnosis, medical advice, addiction treatment, crisis intervention, or professional healthcare.
+    """
 }
 
 struct PlanCard: View {
